@@ -1,5 +1,6 @@
 import { Command } from "commander";
 import { TontoLanguageMetaData } from "../language-server/generated/module";
+import { micronautAction } from "./actions/micronautAction";
 import { generateAction } from "./actions/generateAction";
 import { importAction } from "./actions/importAction";
 
@@ -27,6 +28,14 @@ export default function(): void {
     .option("-d, --destination <dir>", "destination directory of generating")
     .description("generates a tonto file from a JSON file")
     .action(importAction);
+
+
+  program
+    .command("micronaut")
+    .argument("<file>", `source file (possible file extensions: ${fileExtensions})`)
+    .option("-d, --destination <dir>", "destination directory of generating")
+    .description("generates the files required to make a Micronaut project from your model")
+    .action(micronautAction)
 
   program.parse(process.argv);
 }

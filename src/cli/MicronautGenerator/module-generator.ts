@@ -57,7 +57,7 @@ function generateClassRepository(cls: ClassDeclaration, package_name: string) : 
 
 function generateApplication(cls: ClassDeclaration, package_name: string) : Generated {
     return expandToStringWithNL`
-        package base.application;
+        package ${package_name}.applications;
 
         import ${package_name}.models.${cls.name};
         import ${package_name}.repositories.${cls.name}Repository;
@@ -103,7 +103,7 @@ function generateController(cls: ClassDeclaration, package_name: string) : Gener
         import ${package_name}.models.${cls.name};
         import ${package_name}.dtos.${cls.name}InputDto;
         import ${package_name}.dtos.${cls.name}OutputDto;
-        import ${package_name}.application.${cls.name}Apl;
+        import ${package_name}.applications.${cls.name}Apl;
         import ${package_name}.exceptions.${cls.name}NotFoundException;
 
         import java.net.URI;
@@ -134,7 +134,7 @@ function generateController(cls: ClassDeclaration, package_name: string) : Gener
             @Transactional
             public HttpResponse<Void> create(@Body @Valid ${cls.name}InputDto dto) {
                 var data = ${cls.name}.builder()
-                    ${cls.attributes.map(a => `.${a.name.toLowerCase()}(dto.${a.name.toLowerCase()}());`).join('\n')}
+                    ${cls.attributes.map(a => `.${a.name.toLowerCase()}(dto.${a.name.toLowerCase()}())`).join('\n')}
                     .build();
                 var saved = this.${cls.name.toLowerCase()}_app.save(data);
                 return HttpResponse.created(URI.create("/${cls.name.toLowerCase()}s/" + saved.getId()));
@@ -144,7 +144,7 @@ function generateController(cls: ClassDeclaration, package_name: string) : Gener
             public HttpResponse<List<${cls.name}OutputDto>> getAll() {
                 var body = ${cls.name.toLowerCase()}_app.findAll()
                     .stream()
-                    .map(elem -> new ${cls.name}OutputDto(elem.getId()${cls.attributes.map(a => `, elem.get${capitalizeString(a.name)}()`)}))
+                    .map(elem -> new ${cls.name}OutputDto(elem.getId()${cls.attributes.map(a => `, elem.get${capitalizeString(a.name)}()`).join('')}))
                     .toList();
                 return HttpResponse.ok(body);
             }
@@ -153,7 +153,7 @@ function generateController(cls: ClassDeclaration, package_name: string) : Gener
             public HttpResponse<${cls.name}OutputDto> getById(@PathVariable UUID id) {
 
                 return ${cls.name.toLowerCase()}_app.findById(id)
-                    .map(elem -> new ${cls.name}OutputDto(elem.getId()${cls.attributes.map(a => `, elem.get${capitalizeString(a.name)}()`)}))
+                    .map(elem -> HttpResponse.ok(new ${cls.name}OutputDto(elem.getId()${cls.attributes.map(a => `, elem.get${capitalizeString(a.name)}()`).join('')})))
                     .orElseThrow(() -> new ${cls.name}NotFoundException(id));
             }
 
@@ -162,7 +162,7 @@ function generateController(cls: ClassDeclaration, package_name: string) : Gener
                 return ${cls.name.toLowerCase()}_app.findById(id)
                     .map(elem -> {
                         ${cls.attributes.map(a => `elem.set${capitalizeString(a.name)}(dto.${a.name.toLowerCase()}());`).join('\n')}
-                        this.${cls.name.toLowerCase()}_app.update(p);
+                        this.${cls.name.toLowerCase()}_app.update(elem);
                         return HttpResponse.ok(dto);
                     })
                     .orElseThrow(() -> new ${cls.name}NotFoundException(id));
@@ -184,7 +184,7 @@ function generateController(cls: ClassDeclaration, package_name: string) : Gener
 
 function generateModel(cls: ClassDeclaration, package_name: string) : Generated {
     return expandToStringWithNL`
-        package base.models;
+        package ${package_name}.models;
 
         import lombok.Getter;
         import lombok.Setter;
@@ -223,7 +223,7 @@ function generateModel(cls: ClassDeclaration, package_name: string) : Generated 
             @GenericGenerator(name = "uuid", strategy = "uuid2")
             UUID id;
 
-            ${cls.attributes.map(a => `${a.attributeType} ${a.name.toLowerCase()};`).join('\n')}
+            ${cls.attributes.map(a => `${capitalizeString(a.attributeType ?? 'NOTYPE')} ${a.name.toLowerCase()};`).join('\n')}
 
             // @Builder.Default
             // Status status = Status.DRAFT;
@@ -254,7 +254,7 @@ function generateModel(cls: ClassDeclaration, package_name: string) : Generated 
             public String toString() {
                 return "${cls.name} {" +
                     "id="+id+
-                    ${cls.attributes.map(a => `, ${a.name}='"+${a.name.toLowerCase()}+"'"+`).join('\n')}
+                    ${cls.attributes.map(a => `", ${a.name}='"+${a.name.toLowerCase()}+"'"+`).join('\n')}
                 '}';
             }
         }

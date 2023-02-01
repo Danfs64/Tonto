@@ -1,8 +1,9 @@
 import { expandToStringWithNL, Generated } from "langium";
 import { ClassDeclaration } from "../../../language-server/generated/ast";
+import { capitalizeString } from "../generator-utils";
 
 function classAttributes(cls: ClassDeclaration) : Generated {
-    return cls.attributes.map(a => `@NotBlank ${a.attributeType} ${a.name}`).join(',\n')
+    return cls.attributes.map(a => `@NotBlank ${capitalizeString(a.attributeType ?? 'NOTYPE')} ${a.name}`).join(',\n')
 }
 
 export function generateInputDTO(cls: ClassDeclaration, package_name: string) : Generated {
