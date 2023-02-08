@@ -8,13 +8,12 @@ import { capitalizeString, createPath } from "./generator-utils";
 
 import { generateClassNotFoundException, generateNotFoundException, generateNotFoundHandler } from "./module/exception-generator";
 import { generateInputDTO, generateOutputDTO } from "./module/dtos-generator";
+import { processRelations } from "./module/relations";
 
 export function generateModules(model: Model, target_folder: string) : void {
   for(const mod of model.modules) {
-    const MODULE_PATH = createPath(target_folder, "src/main/java/base/", mod.name)
-    const mod_classes = mod.declarations.filter(isClassDeclaration)
-    const package_name = `base.${mod.name}`
-
+    const package_name      = `base.${mod.name}`
+    const MODULE_PATH       = createPath(target_folder, "src/main/java/base/", mod.name)
     const APPLICATIONS_PATH = createPath(MODULE_PATH, 'applications')
     const REPOSITORIES_PATH = createPath(MODULE_PATH, 'repositories')
     const CONTROLLERS_PATH  = createPath(MODULE_PATH, 'controllers')
@@ -24,6 +23,9 @@ export function generateModules(model: Model, target_folder: string) : void {
 
     fs.writeFileSync(path.join(EXCEPTIONS_PATH, 'NotFoundException.java'), toString(generateNotFoundException(package_name)))
     fs.writeFileSync(path.join(EXCEPTIONS_PATH, 'NotFoundHandler.java'),   toString(generateNotFoundHandler(package_name)))
+
+    console.log(processRelations(mod).entries())
+    const mod_classes = mod.declarations.filter(isClassDeclaration)
     for(const cls of mod_classes) {
       const class_name = cls.name
 
