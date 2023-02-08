@@ -3,17 +3,13 @@ import fs from 'fs'
 
 import { Model } from "../../language-server/generated/ast";
 import { expandToStringWithNL, Generated, toString } from 'langium';
-// import { createPath } from './generator-utils';
+import { createPath } from './generator-utils';
 
 export function generateConfigs(model: Model, target_folder: string) {
   fs.writeFileSync(path.join(target_folder, 'GUIDE.md'), toString(generateGuide()))
   fs.writeFileSync(path.join(target_folder, 'docker-compose.yml'), toString(generateCompose()))
 
-  // const RESOURCE_PATH = createPath(target_folder, "src/main/resources")
-  const RESOURCE_PATH = path.join(target_folder, "src/main/resources")
-  if(!fs.existsSync(RESOURCE_PATH)) {
-    fs.mkdirSync(RESOURCE_PATH, {recursive: true})
-  }
+  const RESOURCE_PATH = createPath(target_folder, "src/main/resources")
   fs.writeFileSync(path.join(RESOURCE_PATH, 'application.yml'), toString(generateApplication(model)))
 }
 
