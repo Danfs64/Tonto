@@ -1,17 +1,22 @@
 import { ClassDeclaration, ContextModule, isClassDeclaration, isElementRelation } from "../../../language-server/generated/ast"
 
-type RelationType = 'OnetoMany' | 'OnetoOne' | 'ManytoOne' | 'ManytoMany'
+export type RelationInfo = {
+  tgt: ClassDeclaration,
+  card: RelationType,
+  owner: boolean
+}
+type RelationType = 'OneToMany' | 'OneToOne' | 'ManyToOne' | 'ManyToMany'
 
 function revert_card(card: RelationType) : RelationType {
   switch(card) {
-  case 'OnetoOne':
-    return 'OnetoOne'
-  case 'OnetoMany':
-    return 'ManytoOne'
-  case 'ManytoOne':
-    return 'OnetoMany'
-  case 'ManytoMany':
-    return 'ManytoMany'
+  case 'OneToOne':
+    return 'OneToOne'
+  case 'OneToMany':
+    return 'ManyToOne'
+  case 'ManyToOne':
+    return 'OneToMany'
+  case 'ManyToMany':
+    return 'ManyToMany'
   }
 }
 
@@ -20,7 +25,7 @@ function card_to_string(card1: number | '*', card2: number | '*') : RelationType
     'One' : 'Many'
   const rgt = card2 === 1 ?
     'One' : 'Many'
-  return `${lft}to${rgt}`
+  return `${lft}To${rgt}`
 }
 
 /**
@@ -30,17 +35,9 @@ function card_to_string(card1: number | '*', card2: number | '*') : RelationType
  */
 export function processRelations(
   mod: ContextModule
-) : Map<ClassDeclaration, {
-  tgt: ClassDeclaration,
-  card: RelationType,
-  owner: boolean
-}[]> {
+) : Map<ClassDeclaration, RelationInfo[]> {
   // Inicializa o mapa com listas vazias
-  const map: Map<ClassDeclaration, {
-    tgt: ClassDeclaration,
-    card: RelationType,
-    owner: boolean
-  }[]> = new Map()
+  const map: Map<ClassDeclaration, RelationInfo[]> = new Map()
   for(const cls of mod.declarations.filter(isClassDeclaration)) {
     map.set(cls, new Array())
   }
@@ -77,3 +74,14 @@ export function processRelations(
   return map
 }
 
+/**
+ * Dada uma lista de RelationInfo, retorna a lista de quais dessas relações são passadas no InputDTO
+ * @param relations 
+ */
+export function getInputRelations(relations: RelationInfo[]) : RelationInfo[] {
+  return relations.filter(r => r.owner && r.card === 'ManyToOne')
+}
+
+export function getOutputRelations(relations: RelationInfo[]) : RelationInfo[] {
+  return relations
+}

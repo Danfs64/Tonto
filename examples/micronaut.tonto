@@ -1,0 +1,12 @@
+module main {
+    class Estudante {
+        nome: string
+        matricula: string
+    }
+
+    class Escola {
+        nome: string
+    }
+
+    relation Estudante [1..*] -- estudaEm -- [1] Escola
+}
