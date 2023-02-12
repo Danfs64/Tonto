@@ -49,9 +49,9 @@ export function generateController(cls: ClassDeclaration, relations: RelationInf
             ${inputRelations.map(r => {
               const name = r.tgt.name.toLowerCase()
               return `var ${name} = ${name}_app.findById(dto.${name}_id()).orElseThrow(() -> new ${r.tgt.name}NotFoundException(dto.${name}_id()));`
-            })}
+            }).join('\n')}
             var data = ${cls.name}.builder()
-                ${inputRelations.map(r => `.${r.tgt.name.toLowerCase()}(${r.tgt.name.toLowerCase()})`)}
+                ${inputRelations.map(r => `.${r.tgt.name.toLowerCase()}(${r.tgt.name.toLowerCase()})`).join('\n')}
                 ${cls.attributes.map(a => `.${a.name.toLowerCase()}(dto.${a.name.toLowerCase()}())`).join('\n')}
                 .build();
             var saved = this.${cls.name.toLowerCase()}_app.save(data);
@@ -78,8 +78,13 @@ export function generateController(cls: ClassDeclaration, relations: RelationInf
 
         @Put(uri = "/{id}", consumes = MediaType.APPLICATION_JSON)
         public HttpResponse<?> updateById(@PathVariable UUID id, @Body @Valid ${cls.name}InputDto dto) {
+            ${inputRelations.map(r => {
+              const name = r.tgt.name.toLowerCase()
+              return `var ${name} = ${name}_app.findById(dto.${name}_id()).orElseThrow(() -> new ${r.tgt.name}NotFoundException(dto.${name}_id()));`
+            }).join('\n')}
             return ${cls.name.toLowerCase()}_app.findById(id)
                 .map(elem -> {
+                    ${inputRelations.map(r => `elem.set${capitalizeString(r.tgt.name.toLowerCase())}(${r.tgt.name.toLowerCase()});`).join('\n')}
                     ${cls.attributes.map(a => `elem.set${capitalizeString(a.name)}(dto.${a.name.toLowerCase()}());`).join('\n')}
                     this.${cls.name.toLowerCase()}_app.update(elem);
                     return HttpResponse.ok(dto);
