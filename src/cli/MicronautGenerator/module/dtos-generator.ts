@@ -11,6 +11,7 @@ export function generateInputDTO(cls: ClassDeclaration, relations: RelationInfo[
   return expandToStringWithNL`
     package ${package_name}.dtos;
 
+    import java.util.UUID;
     // import javax.validation.constraints.NotBlank;
     import io.micronaut.core.annotation.Introspected;
 
@@ -38,7 +39,7 @@ export function generateOutputDTO(cls: ClassDeclaration, relations: RelationInfo
 
     import java.util.List;
     import java.util.UUID;
-    // import java.time.LocalDateTime;
+    import java.time.LocalDateTime;
     // import javax.validation.constraints.NotNull;
     import javax.validation.constraints.NotBlank;
     // import javax.validation.constraints.PastOrPresent;

@@ -13,7 +13,9 @@ export function generateController(cls: ClassDeclaration, relations: RelationInf
     import ${package_name}.dtos.${cls.name}InputDto;
     import ${package_name}.dtos.${cls.name}OutputDto;
     import ${package_name}.applications.${cls.name}Apl;
+    ${inputRelations.map(r => `import ${package_name}.applications.${r.tgt.name}Apl;`).join('\n')}
     import ${package_name}.exceptions.${cls.name}NotFoundException;
+    ${inputRelations.map(r => `import ${package_name}.exception.${r.tgt.name}NotFoundException;`).join('\n')}
 
     import java.net.URI;
     import java.util.List;

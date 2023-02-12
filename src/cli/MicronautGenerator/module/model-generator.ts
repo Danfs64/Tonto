@@ -22,7 +22,7 @@ export function generateModel(cls: ClassDeclaration, relations: RelationInfo[], 
     import javax.persistence.OneToMany;
     import javax.persistence.ManyToOne;
     import javax.persistence.ManyToMany;
-    // import javax.persistence.OrderColumn;
+    import javax.persistence.JoinColumn;
     import javax.persistence.CascadeType;
     import javax.persistence.GeneratedValue;
 
@@ -30,8 +30,8 @@ export function generateModel(cls: ClassDeclaration, relations: RelationInfo[], 
 
     import java.io.Serializable;
     import java.time.LocalDateTime;
-    // import java.util.ArrayList;
-    import java.util.List;
+    import java.util.Set;
+    import java.util.HashSet;
     import java.util.Objects;
     import java.util.UUID;
 
@@ -41,7 +41,7 @@ export function generateModel(cls: ClassDeclaration, relations: RelationInfo[], 
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
-    @Table(name = "posts")
+    @Table(name = "${cls.name.toLowerCase()}")
     public class ${cls.name} implements Serializable {
         @Id
         @GeneratedValue(generator = "uuid")
@@ -125,7 +125,7 @@ function generateToOutputDTO(cls: ClassDeclaration, relations: RelationInfo[]) :
   const relationToOutputField = (rel: RelationInfo) => {
     switch(rel.card) {
       case "ManyToOne":
-        return `this.get${capitalizeString(rel.tgt.name.toLowerCase())}().getID(),`
+        return `this.get${capitalizeString(rel.tgt.name.toLowerCase())}().getId(),`
       case "OneToMany":
         return `this.get${capitalizeString(rel.tgt.name.toLowerCase())}s().stream().map(elem -> elem.getId()).toList(),`
       default:
@@ -139,7 +139,7 @@ function generateToOutputDTO(cls: ClassDeclaration, relations: RelationInfo[]) :
             this.getId(),
             ${cls.attributes.map(a => `this.get${capitalizeString(a.name)}(),`).join('\n')}
             ${relations.map(relationToOutputField).join('\n')}
-            this.createdAt()
+            this.getCreatedAt()
         );
     }
   `
