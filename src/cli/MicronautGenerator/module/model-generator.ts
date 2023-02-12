@@ -95,7 +95,19 @@ function generateRelations(cls: ClassDeclaration, relations: RelationInfo[]) : G
 function generateRelation(cls: ClassDeclaration, {tgt, card, owner}: RelationInfo) : Generated {
   switch(card) {
   case "OneToOne":
-    return ''
+    if(owner) {
+      return expandToStringWithNL`
+        @OneToOne
+        @JoinColumn(name = "${tgt.name.toLowerCase()}_id", referencedColumnName = "id")
+        private ${tgt.name} ${tgt.name.toLowerCase()};
+      `
+    } else {
+      return expandToStringWithNL`
+        @OneToOne(cascade = {CascadeType.ALL}, orphanRemoval = true, mappedBy = "${cls.name.toLowerCase()}")
+        @Builder.Default
+        private ${tgt.name} ${tgt.name.toLowerCase()} = null;
+      `
+    }
   case "OneToMany":
     if(owner) {
       return ''
@@ -122,12 +134,14 @@ function generateRelation(cls: ClassDeclaration, {tgt, card, owner}: RelationInf
 }
 
 function generateToOutputDTO(cls: ClassDeclaration, relations: RelationInfo[]) : Generated {
-  const relationToOutputField = (rel: RelationInfo) => {
-    switch(rel.card) {
+  const relationToOutputField = ({tgt, card, owner}: RelationInfo) => {
+    switch(card) {
+      case "OneToOne":
+        return owner ? `this.get${capitalizeString(tgt.name.toLowerCase())}().getId(),` : ''
       case "ManyToOne":
-        return `this.get${capitalizeString(rel.tgt.name.toLowerCase())}().getId(),`
+        return `this.get${capitalizeString(tgt.name.toLowerCase())}().getId(),`
       case "OneToMany":
-        return `this.get${capitalizeString(rel.tgt.name.toLowerCase())}s().stream().map(elem -> elem.getId()).toList(),`
+        return `this.get${capitalizeString(tgt.name.toLowerCase())}s().stream().map(elem -> elem.getId()).toList(),`
       default:
         return `NOT IMPLEMENTED`
     }
@@ -138,7 +152,7 @@ function generateToOutputDTO(cls: ClassDeclaration, relations: RelationInfo[]) :
         return new ${cls.name}OutputDto(
             this.getId(),
             ${cls.attributes.map(a => `this.get${capitalizeString(a.name)}(),`).join('\n')}
-            ${relations.map(relationToOutputField).join('\n')}
+            ${relations.map(relationToOutputField).filter(s => s !== '').join('\n')}
             this.getCreatedAt()
         );
     }

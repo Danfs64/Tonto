@@ -18,12 +18,25 @@ function generateGuide() : Generated {
   return expandToStringWithNL`
     # README
 
+    ## Setup
+
     * Instale o Micronaut (3.8.1+) na sua máquina
     * Rode o seguinte comando, para gerar o projeto Micronaut:
       \`mn create-app --build=gradle --jdk=17 --lang=java --test=junit --features=postgres,openapi,data-jpa,lombok,assertj,testcontainers base.demo\`
     * Passe os todos os arquivos gerados pelo gerador para dentro da pasta gerada pelo Micronaut
     * Adicione a seguinte linha ao arquivo \`gradle.properties\`:
       * \`org.gradle.jvmargs=-Dmicronaut.openapi.views.spec=redoc.enabled=true,rapidoc.enabled=true,swagger-ui.enabled=true,swagger-ui.theme=flattop\`
+
+    ## Rodando a aplicação
+
+    * Vá para a pasta gerada pelo Micronaut (provavelmente se chama 'demo')
+    * Suba o docker do banco de dados com o comando \`docker compose up -d postgres\`
+    * Rode a aplicação com o comando \`./gradlew run\`
+    * A interface da API estará rodando em \`localhost:8080/swagger/views/swagger-ui/\` via SwaggerUI e em \`localhost:8080/swagger/views/rapidoc/\` via RapiDoc
+
+    ## Bugs Conhecidos
+
+    * Os arquivos InputDTO PODEM ter uma vírgula a mais do que deveriam - uma vírgula depois do último argumento. Elas precisam ser removidas manualmente
   `
 }
 
