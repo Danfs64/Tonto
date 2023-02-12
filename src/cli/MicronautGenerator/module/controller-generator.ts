@@ -1,7 +1,8 @@
 import { expandToStringWithNL, Generated } from "langium";
 import { ClassDeclaration } from "../../../language-server/generated/ast";
 import { capitalizeString } from "../generator-utils";
-import { RelationInfo, getInputRelations } from "./relations";
+import { getInputRelations } from "./dtos-generator";
+import { RelationInfo } from "./relations";
 
 export function generateController(cls: ClassDeclaration, relations: RelationInfo[], package_name: string) : Generated {
   const inputRelations = getInputRelations(relations)

@@ -73,15 +73,3 @@ export function processRelations(
   }
   return map
 }
-
-/**
- * Dada uma lista de RelationInfo, retorna a lista de quais dessas relações são passadas no InputDTO
- * @param relations 
- */
-export function getInputRelations(relations: RelationInfo[]) : RelationInfo[] {
-  return relations.filter(r => r.owner && r.card === 'ManyToOne')
-}
-
-export function getOutputRelations(relations: RelationInfo[]) : RelationInfo[] {
-  return relations
-}
