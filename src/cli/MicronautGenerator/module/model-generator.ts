@@ -1,4 +1,4 @@
-import { CompositeGeneratorNode, expandToStringWithNL, Generated } from "langium";
+import { CompositeGeneratorNode, expandToString, expandToStringWithNL, Generated } from "langium";
 import { ClassDeclaration } from "../../../language-server/generated/ast";
 import { capitalizeString } from "../generator-utils";
 import { RelationInfo } from "./relations";
@@ -6,6 +6,8 @@ import { RelationInfo } from "./relations";
 export function generateModel(cls: ClassDeclaration, relations: RelationInfo[], package_name: string) : Generated {
   return expandToStringWithNL`
     package ${package_name}.models;
+
+    import ${package_name}.dtos.${cls.name}OutputDto;
 
     import lombok.Getter;
     import lombok.Setter;
@@ -41,7 +43,6 @@ export function generateModel(cls: ClassDeclaration, relations: RelationInfo[], 
     @AllArgsConstructor
     @Table(name = "posts")
     public class ${cls.name} implements Serializable {
-
         @Id
         @GeneratedValue(generator = "uuid")
         @GenericGenerator(name = "uuid", strategy = "uuid2")
@@ -50,6 +51,7 @@ export function generateModel(cls: ClassDeclaration, relations: RelationInfo[], 
         ${cls.attributes.map(a => `${capitalizeString(a.attributeType ?? 'NOTYPE')} ${a.name.toLowerCase()};`).join('\n')}
 
         ${generateRelations(cls, relations)}
+
         @Builder.Default
         LocalDateTime createdAt = LocalDateTime.now();
 
@@ -74,6 +76,8 @@ export function generateModel(cls: ClassDeclaration, relations: RelationInfo[], 
                 ${cls.attributes.map(a => `", ${a.name}='"+${a.name.toLowerCase()}+"'"+`).join('\n')}
             '}';
         }
+
+        ${generateToOutputDTO(cls, relations)}
     }
   `
 }
@@ -115,4 +119,28 @@ function generateRelation(cls: ClassDeclaration, {tgt, card, owner}: RelationInf
   case "ManyToMany":
     return ''
   }
+}
+
+function generateToOutputDTO(cls: ClassDeclaration, relations: RelationInfo[]) : Generated {
+  const relationToOutputField = (rel: RelationInfo) => {
+    switch(rel.card) {
+      case "ManyToOne":
+        return `this.get${capitalizeString(rel.tgt.name.toLowerCase())}().getID(),`
+      case "OneToMany":
+        return `this.get${capitalizeString(rel.tgt.name.toLowerCase())}s().stream().map(elem -> elem.getId()).toList(),`
+      default:
+        return `NOT IMPLEMENTED`
+    }
+  }
+
+  return expandToString`
+    public ${cls.name}OutputDto toOutputDTO() {
+        return new ${cls.name}OutputDto(
+            this.getId(),
+            ${cls.attributes.map(a => `this.get${capitalizeString(a.name)}(),`).join('\n')}
+            ${relations.map(relationToOutputField).join('\n')}
+            this.createdAt()
+        );
+    }
+  `
 }

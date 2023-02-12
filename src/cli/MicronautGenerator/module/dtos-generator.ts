@@ -57,14 +57,14 @@ function processOutputRelations(relations: RelationInfo[]) : Generated {
 
   for(const {tgt, card} of relations) {
     switch (card) {
-    case "OneToMany":
-      node.append(`List<UUID> ${tgt.name.toLowerCase()}_ids,`)
-      break
+    case "OneToOne":
     case "ManyToOne":
       node.append(`UUID ${tgt.name.toLowerCase()}_id,`)
       break;
-    default:
-      break;
+    case "OneToMany":
+    case "ManyToMany":
+      node.append(`List<UUID> ${tgt.name.toLowerCase()}_ids,`)
+      break
     }
   }
 
