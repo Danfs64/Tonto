@@ -16,7 +16,7 @@ export function generateController(cls: ClassDeclaration, relations: RelationInf
     import ${package_name}.applications.${cls.name}Apl;
     ${inputRelations.map(r => `import ${package_name}.applications.${r.tgt.name}Apl;`).join('\n')}
     import ${package_name}.exceptions.${cls.name}NotFoundException;
-    ${inputRelations.map(r => `import ${package_name}.exception.${r.tgt.name}NotFoundException;`).join('\n')}
+    ${inputRelations.map(r => `import ${package_name}.exceptions.${r.tgt.name}NotFoundException;`).join('\n')}
 
     import java.net.URI;
     import java.util.List;
@@ -48,10 +48,20 @@ export function generateController(cls: ClassDeclaration, relations: RelationInf
         public HttpResponse<Void> create(@Body @Valid ${cls.name}InputDto dto) {
             ${inputRelations.map(r => {
               const name = r.tgt.name.toLowerCase()
-              return `var ${name} = ${name}_app.findById(dto.${name}_id()).orElseThrow(() -> new ${r.tgt.name}NotFoundException(dto.${name}_id()));`
+              if(r.card === "ManyToMany") {
+                return `var ${name}s = dto.${name}_ids().stream().map(id -> ${name}_app.findById(id).orElseThrow(() -> new ${r.tgt.name}NotFoundException(id))).toList();`
+              } else {
+                return `var ${name} = ${name}_app.findById(dto.${name}_id()).orElseThrow(() -> new ${r.tgt.name}NotFoundException(dto.${name}_id()));`
+              }
             }).join('\n')}
             var data = ${cls.name}.builder()
-                ${inputRelations.map(r => `.${r.tgt.name.toLowerCase()}(${r.tgt.name.toLowerCase()})`).join('\n')}
+                ${inputRelations.map(r => {
+                  if(r.card === "ManyToMany") {
+                    return `.${r.tgt.name.toLowerCase()}s(${r.tgt.name.toLowerCase()}s)`
+                  } else {
+                    return `.${r.tgt.name.toLowerCase()}(${r.tgt.name.toLowerCase()})`
+                  }
+                }).join('\n')}
                 ${cls.attributes.map(a => `.${a.name.toLowerCase()}(dto.${a.name.toLowerCase()}())`).join('\n')}
                 .build();
             var saved = this.${cls.name.toLowerCase()}_app.save(data);

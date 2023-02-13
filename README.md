@@ -97,6 +97,7 @@ This is all the tools you need installed to run the project and the versions tha
 
 ### ⚙️ Initializing
 
+ * Install the pre-requisites with your package manager of preference (`npm install`)
  * Run `npm run langium:generate` to generate TypeScript code from the grammar definition.
  * Run `npm run build` to compile all TypeScript code or `npm run watch` if you want the compiler to work automatically everytime you update your files
  * Press `F5` to open a new window with your extension loaded.

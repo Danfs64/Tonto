@@ -24,9 +24,13 @@ export function generateInputDTO(cls: ClassDeclaration, relations: RelationInfo[
 }
 
 function processInputRelations(relations: RelationInfo[]) : Generated {
-  return getInputRelations(relations).map(
-    r => `UUID ${r.tgt.name.toLowerCase()}_id`
-  ).join(',\n')
+  return getInputRelations(relations).map(r => {
+    if(r.card === "ManyToMany") {
+      return `List<UUID> ${r.tgt.name.toLowerCase()}_ids`
+    } else {
+      return `UUID ${r.tgt.name.toLowerCase()}_id`
+    }
+  }).join(',\n')
 }
 
 export function generateOutputDTO(cls: ClassDeclaration, relations: RelationInfo[], package_name: string) : Generated {
@@ -73,7 +77,7 @@ function processOutputRelations(relations: RelationInfo[]) : Generated {
  * Dada uma lista de RelationInfo, retorna a lista de quais dessas relações são passadas no InputDTO.
  */
 export function getInputRelations(relations: RelationInfo[]) : RelationInfo[] {
-  return relations.filter(r => r.owner && (r.card === 'ManyToOne' || r.card === "OneToOne"))
+  return relations.filter(r => r.owner && (r.card === 'ManyToOne' || r.card === "OneToOne" || r.card === "ManyToMany"))
 }
 
 /**

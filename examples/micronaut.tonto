@@ -8,5 +8,5 @@ module main {
         nome: string
     }
 
-    relation Estudante [1..*] -- estudaEm -- [1] Escola
+    relation Estudante [1..*] -- estudaEm -- [1..*] Escola
 }

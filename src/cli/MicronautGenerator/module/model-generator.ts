@@ -129,7 +129,24 @@ function generateRelation(cls: ClassDeclaration, {tgt, card, owner}: RelationInf
       return ''
     }
   case "ManyToMany":
-    return ''
+    if(owner) {
+      return expandToStringWithNL`
+        @ManyToMany
+        @JoinTable(
+            name = "${cls.name.toLowerCase()}_${tgt.name.toLowerCase()}",
+            joinColumns = @JoinColumn(name = "${cls.name.toLowerCase()}_id"),
+            inverseJoinColumns = @JoinColumn(name = "${tgt.name.toLowerCase()}_id")
+        )
+        @Builder.Default
+        private Set<${tgt.name}> ${tgt.name.toLowerCase()}s = new HashSet<>();
+      `
+    } else {
+      return expandToStringWithNL`
+        @ManyToMany(mappedBy = "${cls.name.toLowerCase()}s")
+        @Builder.Default
+        private Set<${tgt.name}> ${tgt.name.toLowerCase()}s = new HashSet<>();
+      `
+    }
   }
 }
 
@@ -141,9 +158,8 @@ function generateToOutputDTO(cls: ClassDeclaration, relations: RelationInfo[]) :
       case "ManyToOne":
         return `this.get${capitalizeString(tgt.name.toLowerCase())}().getId(),`
       case "OneToMany":
+      case "ManyToMany":
         return `this.get${capitalizeString(tgt.name.toLowerCase())}s().stream().map(elem -> elem.getId()).toList(),`
-      default:
-        return `NOT IMPLEMENTED`
     }
   }
 
