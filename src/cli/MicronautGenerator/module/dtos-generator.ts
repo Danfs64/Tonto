@@ -11,6 +11,7 @@ export function generateInputDTO(cls: ClassDeclaration, relations: RelationInfo[
   return expandToStringWithNL`
     package ${package_name}.dtos;
 
+    import java.util.List;
     import java.util.UUID;
     // import javax.validation.constraints.NotBlank;
     import io.micronaut.core.annotation.Introspected;

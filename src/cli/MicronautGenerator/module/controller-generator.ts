@@ -19,8 +19,9 @@ export function generateController(cls: ClassDeclaration, relations: RelationInf
     ${inputRelations.map(r => `import ${package_name}.exceptions.${r.tgt.name}NotFoundException;`).join('\n')}
 
     import java.net.URI;
-    import java.util.List;
     import java.util.UUID;
+    import java.util.List;
+    import java.util.HashSet;
     import jakarta.inject.Inject;
     import javax.validation.Valid;
     import javax.transaction.Transactional;
@@ -57,7 +58,7 @@ export function generateController(cls: ClassDeclaration, relations: RelationInf
             var data = ${cls.name}.builder()
                 ${inputRelations.map(r => {
                   if(r.card === "ManyToMany") {
-                    return `.${r.tgt.name.toLowerCase()}s(${r.tgt.name.toLowerCase()}s)`
+                    return `.${r.tgt.name.toLowerCase()}s(new HashSet<>(${r.tgt.name.toLowerCase()}s))`
                   } else {
                     return `.${r.tgt.name.toLowerCase()}(${r.tgt.name.toLowerCase()})`
                   }
@@ -88,13 +89,13 @@ export function generateController(cls: ClassDeclaration, relations: RelationInf
 
         @Put(uri = "/{id}", consumes = MediaType.APPLICATION_JSON)
         public HttpResponse<?> updateById(@PathVariable UUID id, @Body @Valid ${cls.name}InputDto dto) {
-            ${inputRelations.map(r => {
+            ${inputRelations.filter(r => r.card !== "ManyToMany").map(r => {
               const name = r.tgt.name.toLowerCase()
               return `var ${name} = ${name}_app.findById(dto.${name}_id()).orElseThrow(() -> new ${r.tgt.name}NotFoundException(dto.${name}_id()));`
             }).join('\n')}
             return ${cls.name.toLowerCase()}_app.findById(id)
                 .map(elem -> {
-                    ${inputRelations.map(r => `elem.set${capitalizeString(r.tgt.name.toLowerCase())}(${r.tgt.name.toLowerCase()});`).join('\n')}
+                    ${inputRelations.filter(r => r.card !== "ManyToMany").map(r => `elem.set${capitalizeString(r.tgt.name.toLowerCase())}(${r.tgt.name.toLowerCase()});`).join('\n')}
                     ${cls.attributes.map(a => `elem.set${capitalizeString(a.name)}(dto.${a.name.toLowerCase()}());`).join('\n')}
                     this.${cls.name.toLowerCase()}_app.update(elem);
                     return HttpResponse.ok(dto);

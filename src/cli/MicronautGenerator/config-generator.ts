@@ -23,7 +23,7 @@ function generateGuide() : Generated {
     * Instale o Micronaut (3.8.1+) na sua máquina
     * Rode o seguinte comando, para gerar o projeto Micronaut:
       \`mn create-app --build=gradle --jdk=17 --lang=java --test=junit --features=postgres,openapi,data-jpa,lombok,assertj,testcontainers base.demo\`
-    * Passe os todos os arquivos gerados pelo gerador para dentro da pasta gerada pelo Micronaut
+    * Passe os todos os arquivos gerados pelo gerador para dentro da pasta gerada pelo Micronaut (Sobreescrevendo os que forem necessários)
     * Adicione a seguinte linha ao arquivo \`gradle.properties\`:
       * \`org.gradle.jvmargs=-Dmicronaut.openapi.views.spec=redoc.enabled=true,rapidoc.enabled=true,swagger-ui.enabled=true,swagger-ui.theme=flattop\`
 

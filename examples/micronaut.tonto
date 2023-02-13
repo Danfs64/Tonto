@@ -1,10 +1,10 @@
 module main {
-    class Estudante {
+    kind Estudante {
         nome: string
         matricula: string
     }
 
-    class Escola {
+    kind Escola {
         nome: string
     }
 
