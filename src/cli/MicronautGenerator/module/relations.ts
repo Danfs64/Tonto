@@ -42,6 +42,19 @@ export function processRelations(
     map.set(cls, new Array())
   }
 
+  const add_relation = (owner: ClassDeclaration, non_owner: ClassDeclaration, card_name: RelationType) => {
+    map.get(owner)?.push({
+      tgt: non_owner,
+      card: card_name,
+      owner: true
+    })
+    map.get(non_owner)?.push({
+      tgt: owner,
+      card: revert_card(card_name),
+      owner: false
+    })
+  }
+
   for(const rel of mod.declarations.filter(isElementRelation)) {
     const lft_cls = rel.firstEnd?.ref
     const lft_card =
@@ -60,16 +73,11 @@ export function processRelations(
     }
 
     const card_name = card_to_string(lft_card, rgt_card)
-    map.get(lft_cls)?.push({
-      tgt: rgt_cls,
-      card: card_name,
-      owner: true
-    })
-    map.get(rgt_cls)?.push({
-      tgt: lft_cls,
-      card: revert_card(card_name),
-      owner: false
-    })
+    if(card_name === "OneToMany") {
+      add_relation(rgt_cls, lft_cls, "ManyToOne")
+    } else {
+      add_relation(lft_cls, rgt_cls, card_name)
+    }
   }
   return map
 }
