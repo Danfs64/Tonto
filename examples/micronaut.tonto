@@ -4,7 +4,11 @@ module main {
         matricula: string
     }
 
-    kind Escola {
+    kind Organizacao {
+        cnpj: string
+    }
+
+    subkind Escola specializes Organizacao {
         nome: string
     }
 
