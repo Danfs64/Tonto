@@ -1,11 +1,11 @@
-import { ErrorMessages } from "./../models/ErrorMessages";
 import { ValidationAcceptor } from "langium";
+import { ClassDeclaration } from "../generated/ast";
 import { natureUtils } from "../models/Natures";
 import {
   getOntologicalCategory,
   isSortalOntoCategory,
   isUltimateSortalOntoCategory,
-  OntologicalCategoryEnum,
+  OntologicalCategoryEnum
 } from "../models/OntologicalCategory";
 import {
   allowedStereotypeRestrictedToMatches,
@@ -13,13 +13,14 @@ import {
   hasSortalStereotype,
   isAntiRigidStereotype,
   isRigidStereotype,
-  isSemiRigidStereotype,
+  isSemiRigidStereotype
 } from "../models/StereotypeUtils";
 import { checkCircularSpecializationRecursive } from "../utils/CheckCircularSpecializationRecursive";
 import { checkNatureCompatibleWithStereotype } from "../utils/checkNatureCompatibleWithStereotype";
 import { checkSortalSpecializesUniqueUltimateSortalRecursive } from "../utils/CheckSortalSpecializesUniqueUltimateSortalRecursive";
 import { checkUltimateSortalSpecializesUltimateSortalRecursive } from "../utils/CheckUltimateSortalSpecializesUltimateSortalRecursive";
-import { ClassDeclaration } from "../generated/ast";
+import { formPhrase } from "../utils/formPhrase";
+import { ErrorMessages } from "./../models/ErrorMessages";
 
 export class ClassDeclarationValidator {
   /**
@@ -197,7 +198,6 @@ export class ClassDeclarationValidator {
           specDeclaration.classElementType.ontologicalCategory;
 
         if (isAntiRigidStereotype(specOntologicalCategory)) {
-          // console.log("Error na referencia")
           accept(
             "error",
             `Prohibited specialization: rigid/semi-rigid specializing an anti-rigid. The rigid/semi-rigid class ${classDeclaration.name} cannot specialize the anti-rigid class ${specDeclaration.name}`,
@@ -217,7 +217,7 @@ export class ClassDeclarationValidator {
   ): void {
     const references = classElement.references;
 
-    let names: string[] = [];
+    const names: string[] = [];
 
     references.forEach((reference) => {
       const nameExists = names.find((name) => name === reference.name);
@@ -269,12 +269,14 @@ export class ClassDeclarationValidator {
           return false;
         });
         if (incompatibleNatures.length >= 1) {
+          const naturesString = formPhrase(incompatibleNatures);
+
           accept(
             "error",
-            `Incompatible stereotype and Nature restriction combination. Class ${classDeclaration.name} has its value for 'restrictedTo' incompatible with the stereotype`,
+            `Incompatible stereotype and Nature restriction combination. Class ${classDeclaration.name} has its value for 'restrictedTo' incompatible with the following natures: ${naturesString}`,
             {
               node: classDeclaration,
-              property: "name",
+              property: "ontologicalNatures",
             }
           );
         }
@@ -297,7 +299,7 @@ export class ClassDeclarationValidator {
         let specializationDoesntExistsInParent = false;
         classDeclaration.specializationEndurants.forEach(
           (specializationEndurant) => {
-            let specializationNatures =
+            const specializationNatures =
               specializationEndurant.ref?.ontologicalNatures;
             const natureExists = specializationNatures?.natures.find(
               (specializationNature) => {
@@ -333,7 +335,7 @@ export class ClassDeclarationValidator {
       classDeclaration.classElementType?.ontologicalCategory;
 
     specializations.forEach((specialization) => {
-      let natures = specialization.ref?.ontologicalNatures?.natures;
+      const natures = specialization.ref?.ontologicalNatures?.natures;
       if (natures) {
         let hasCompatibleNatures = false;
         natures.forEach((nature) => {
@@ -362,7 +364,7 @@ export class ClassDeclarationValidator {
 
   checkNaturesOnlyOnNonSortals(
     classElement: ClassDeclaration,
-    accept: ValidationAcceptor
+    _: ValidationAcceptor
   ): void {
     const ElementNatures = classElement.ontologicalNatures;
     if (ElementNatures) {
@@ -384,9 +386,9 @@ export class ClassDeclarationValidator {
    * Powertype está definida
    */
   // TODO: Not implemented
-  checkMissingIsPowertype(): // classDeclaration: ClassDeclaration,
-  // accept: ValidationAcceptor
-  void {}
+  // checkMissingIsPowertype(): // classDeclaration: ClassDeclaration,
+  //   // accept: ValidationAcceptor
+  //   void { }
 
   /*
    * Checks if an Element has a ciclic specialization
@@ -448,7 +450,7 @@ export class ClassDeclarationValidator {
     const ontologicalCategory =
       classDeclaration.classElementType.ontologicalCategory;
 
-    if (ontologicalCategory === "datatype") {
+    if (ontologicalCategory === OntologicalCategoryEnum.DATATYPE) {
       const specializationItems = classDeclaration.specializationEndurants;
       specializationItems.forEach((item) => {
         if (item.ref?.classElementType.ontologicalCategory === "datatype") {

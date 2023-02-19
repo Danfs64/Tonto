@@ -1,7 +1,0 @@
-module CheckCompatibleNature {
-    category Category of abstracts
-
-    class Number2 of abstracts
-
-    kind Number of abstracts
-}
