@@ -1,5 +1,5 @@
 import fs from "fs";
-import { CompositeGeneratorNode } from "langium";
+import { CompositeGeneratorNode, toString } from "langium";
 import { MultilingualText, Project } from "ontouml-js";
 import path from "path";
 import { Model } from "../language-server/generated/ast";
@@ -43,7 +43,7 @@ function generate(ctx: GeneratorContext): string {
     fs.mkdirSync(ctx.destination, { recursive: true });
   }
   const generatedFilePath = path.join(ctx.destination, ctx.fileName);
-  // fs.writeFileSync(generatedFilePath, isGeneratorNode(ctx.fileNode));
+  fs.writeFileSync(generatedFilePath, toString(ctx.fileNode));
   return generatedFilePath;
 }
 
