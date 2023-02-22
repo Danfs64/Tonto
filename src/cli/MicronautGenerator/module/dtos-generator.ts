@@ -1,13 +1,25 @@
-import { CompositeGeneratorNode, expandToStringWithNL, Generated } from "langium";
-import { ClassDeclaration } from "../../../language-server/generated/ast";
+import { expandToStringWithNL, Generated, toString } from "langium";
+import { Attribute, ClassDeclaration } from "../../../language-server/generated/ast";
 import { capitalizeString } from "../generator-utils";
 import { RelationInfo } from "./relations";
 
-function classAttributes(cls: ClassDeclaration) : Generated {
-  return cls.attributes.map(a => `${capitalizeString(a.attributeType ?? 'NOTYPE')} ${a.name},`).join('\n')
+function processAttributes(attrs: Attribute[]) : Generated[] {
+  return attrs.map(a => `${capitalizeString(a.attributeType ?? 'NOTYPE')} ${a.name}`)
 }
 
-export function generateInputDTO(cls: ClassDeclaration, relations: RelationInfo[], package_name: string) : Generated {
+function processRelations(relations: RelationInfo[]) : Generated[] {
+  return relations.map(r => {
+    if(r.card === "ManyToMany" || r.card === "OneToMany") {
+      return `List<UUID> ${r.tgt.name.toLowerCase()}_ids`
+    } else {
+      return `UUID ${r.tgt.name.toLowerCase()}_id`
+    }
+  })
+}
+
+export function generateInputDTO(cls: ClassDeclaration, attributes: Attribute[], relations: RelationInfo[], package_name: string) : Generated {
+  const attrs_str = processAttributes(attributes)
+  const rels_str = processRelations(getInputRelations(relations))
   return expandToStringWithNL`
     package ${package_name}.dtos;
 
@@ -18,23 +30,15 @@ export function generateInputDTO(cls: ClassDeclaration, relations: RelationInfo[
 
     @Introspected
     public record ${cls.name}InputDto(
-        ${classAttributes(cls)}
-        ${processInputRelations(relations)}
+        ${attrs_str.concat(rels_str).map(toString).join(',\n')}
     ) {}
   `
 }
 
-function processInputRelations(relations: RelationInfo[]) : Generated {
-  return getInputRelations(relations).map(r => {
-    if(r.card === "ManyToMany") {
-      return `List<UUID> ${r.tgt.name.toLowerCase()}_ids`
-    } else {
-      return `UUID ${r.tgt.name.toLowerCase()}_id`
-    }
-  }).join(',\n')
-}
+export function generateOutputDTO(cls: ClassDeclaration, attributes: Attribute[], relations: RelationInfo[], package_name: string) : Generated {
+  const attrs_str = processAttributes(attributes)
+  const rels_str = processRelations(getOutputRelations(relations))
 
-export function generateOutputDTO(cls: ClassDeclaration, relations: RelationInfo[], package_name: string) : Generated {
   return expandToStringWithNL`
     package ${package_name}.dtos;
 
@@ -47,38 +51,17 @@ export function generateOutputDTO(cls: ClassDeclaration, relations: RelationInfo
 
     public record ${cls.name}OutputDto(
         @NotBlank UUID id,
-        ${classAttributes(cls)}
-        ${processOutputRelations(relations)}
+        ${attrs_str.concat(rels_str).map(str => toString(str)+',').join('\n')}
         LocalDateTime createdAt
     ) {}
   `
-}
-
-function processOutputRelations(relations: RelationInfo[]) : Generated {
-  const node = new CompositeGeneratorNode()
-
-  for(const {tgt, card} of getOutputRelations(relations)) {
-    switch (card) {
-    case "OneToOne":
-    case "ManyToOne":
-      node.append(`UUID ${tgt.name.toLowerCase()}_id,`)
-      break;
-    case "OneToMany":
-    case "ManyToMany":
-      node.append(`List<UUID> ${tgt.name.toLowerCase()}_ids,`)
-      break
-    }
-    node.appendNewLine()
-  }
-
-  return node
 }
 
 /**
  * Dada uma lista de RelationInfo, retorna a lista de quais dessas relações são passadas no InputDTO.
  */
 export function getInputRelations(relations: RelationInfo[]) : RelationInfo[] {
-  return relations.filter(r => r.owner && (r.card === 'ManyToOne' || r.card === "OneToOne" || r.card === "ManyToMany"))
+  return relations.filter(r => r.owner)
 }
 
 /**

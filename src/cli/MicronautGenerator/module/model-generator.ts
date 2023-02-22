@@ -1,21 +1,26 @@
-import { CompositeGeneratorNode, expandToString, expandToStringWithNL, Generated } from "langium";
+import { CompositeGeneratorNode, expandToStringWithNL, Generated } from "langium";
 import { ClassDeclaration } from "../../../language-server/generated/ast";
 import { capitalizeString } from "../generator-utils";
 import { RelationInfo } from "./relations";
 
-export function generateModel(cls: ClassDeclaration, relations: RelationInfo[], package_name: string) : Generated {
+export function generateModel(cls: ClassDeclaration, is_supertype: boolean, relations: RelationInfo[], package_name: string) : Generated {
+  const supertype = cls.specializationEndurants.length > 0 ?
+    cls.specializationEndurants[0].ref :
+    undefined
+
   return expandToStringWithNL`
     package ${package_name}.models;
-
-    import ${package_name}.dtos.${cls.name}OutputDto;
 
     import lombok.Getter;
     import lombok.Setter;
     import lombok.Builder;
     import lombok.NoArgsConstructor;
     import lombok.AllArgsConstructor;
+    import lombok.experimental.SuperBuilder;
 
     import javax.persistence.Id;
+    import javax.persistence.Inheritance;
+    import javax.persistence.InheritanceType;
     import javax.persistence.Table;
     import javax.persistence.Entity;
     import javax.persistence.OneToOne;
@@ -39,11 +44,12 @@ export function generateModel(cls: ClassDeclaration, relations: RelationInfo[], 
     @Getter
     @Setter
     @Entity
-    @Builder
+    @SuperBuilder
     @NoArgsConstructor
     @AllArgsConstructor
     @Table(name = "${cls.name.toLowerCase()}")
-    public class ${cls.name} implements Serializable {
+    ${is_supertype ? '@Inheritance(strategy = InheritanceType.JOINED)' : undefined}
+    public class ${cls.name} ${supertype ? `extends ${supertype.name}` : ''} implements Serializable {
         @Id
         @GeneratedValue(generator = "uuid")
         @GenericGenerator(name = "uuid", strategy = "uuid2")
@@ -77,8 +83,6 @@ export function generateModel(cls: ClassDeclaration, relations: RelationInfo[], 
                 ${cls.attributes.map(a => `", ${a.name}='"+${a.name.toLowerCase()}+"'"+`).join('\n')}
             '}';
         }
-
-        ${generateToOutputDTO(cls, relations)}
     }
   `
 }
@@ -149,29 +153,4 @@ function generateRelation(cls: ClassDeclaration, {tgt, card, owner}: RelationInf
       `
     }
   }
-}
-
-function generateToOutputDTO(cls: ClassDeclaration, relations: RelationInfo[]) : Generated {
-  const relationToOutputField = ({tgt, card, owner}: RelationInfo) => {
-    switch(card) {
-      case "OneToOne":
-        return owner ? `this.get${capitalizeString(tgt.name.toLowerCase())}().getId(),` : ''
-      case "ManyToOne":
-        return `this.get${capitalizeString(tgt.name.toLowerCase())}().getId(),`
-      case "OneToMany":
-      case "ManyToMany":
-        return `this.get${capitalizeString(tgt.name.toLowerCase())}s().stream().map(elem -> elem.getId()).toList(),`
-    }
-  }
-
-  return expandToString`
-    public ${cls.name}OutputDto toOutputDTO() {
-        return new ${cls.name}OutputDto(
-            this.getId(),
-            ${cls.attributes.map(a => `this.get${capitalizeString(a.name)}(),`).join('\n')}
-            ${relations.map(relationToOutputField).filter(s => s !== '').join('\n')}
-            this.getCreatedAt()
-        );
-    }
-  `
 }

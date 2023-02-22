@@ -1,10 +1,10 @@
-import { expandToStringWithNL, Generated } from "langium";
-import { ClassDeclaration } from "../../../language-server/generated/ast";
+import { expandToString, expandToStringWithNL, Generated } from "langium";
+import { Attribute, ClassDeclaration } from "../../../language-server/generated/ast";
 import { capitalizeString } from "../generator-utils";
 import { getInputRelations } from "./dtos-generator";
 import { RelationInfo } from "./relations";
 
-export function generateController(cls: ClassDeclaration, relations: RelationInfo[], package_name: string) : Generated {
+export function generateController(cls: ClassDeclaration, attributes: Attribute[], relations: RelationInfo[], package_name: string) : Generated {
   const inputRelations = getInputRelations(relations)
 
   return expandToStringWithNL`
@@ -63,7 +63,7 @@ export function generateController(cls: ClassDeclaration, relations: RelationInf
                     return `.${r.tgt.name.toLowerCase()}(${r.tgt.name.toLowerCase()})`
                   }
                 }).join('\n')}
-                ${cls.attributes.map(a => `.${a.name.toLowerCase()}(dto.${a.name.toLowerCase()}())`).join('\n')}
+                ${attributes.map(a => `.${a.name.toLowerCase()}(dto.${a.name.toLowerCase()}())`).join('\n')}
                 .build();
             var saved = this.${cls.name.toLowerCase()}_app.save(data);
             return HttpResponse.created(URI.create("/${cls.name.toLowerCase()}s/" + saved.getId()));
@@ -74,7 +74,7 @@ export function generateController(cls: ClassDeclaration, relations: RelationInf
         public HttpResponse<List<${cls.name}OutputDto>> getAll() {
             var body = ${cls.name.toLowerCase()}_app.findAll()
                 .stream()
-                .map(elem -> elem.toOutputDTO())
+                .map(elem -> this.modelToOutputDTO(elem))
                 .toList();
             return HttpResponse.ok(body);
         }
@@ -83,7 +83,7 @@ export function generateController(cls: ClassDeclaration, relations: RelationInf
         @Transactional
         public HttpResponse<${cls.name}OutputDto> getById(@PathVariable UUID id) {
             return ${cls.name.toLowerCase()}_app.findById(id)
-                .map(elem -> HttpResponse.ok(elem.toOutputDTO()))
+                .map(elem -> HttpResponse.ok(this.modelToOutputDTO(elem)))
                 .orElseThrow(() -> new ${cls.name}NotFoundException(id));
         }
 
@@ -96,8 +96,9 @@ export function generateController(cls: ClassDeclaration, relations: RelationInf
             return ${cls.name.toLowerCase()}_app.findById(id)
                 .map(elem -> {
                     ${inputRelations.filter(r => r.card !== "ManyToMany").map(r => `elem.set${capitalizeString(r.tgt.name.toLowerCase())}(${r.tgt.name.toLowerCase()});`).join('\n')}
-                    ${cls.attributes.map(a => `elem.set${capitalizeString(a.name)}(dto.${a.name.toLowerCase()}());`).join('\n')}
+                    ${attributes.map(a => `elem.set${capitalizeString(a.name)}(dto.${a.name.toLowerCase()}());`).join('\n')}
                     this.${cls.name.toLowerCase()}_app.update(elem);
+
                     return HttpResponse.ok(dto);
                 })
                 .orElseThrow(() -> new ${cls.name}NotFoundException(id));
@@ -109,10 +110,40 @@ export function generateController(cls: ClassDeclaration, relations: RelationInf
             return ${cls.name.toLowerCase()}_app.findById(id)
                 .map(elem -> {
                     this.${cls.name.toLowerCase()}_app.delete(elem);
+
                     return HttpResponse.noContent();
                 })
                 .orElseThrow(() -> new ${cls.name}NotFoundException(id));
         }
+
+        ${generateToOutputDTO(cls.name, attributes, relations)}
+    }
+  `
+}
+
+function generateToOutputDTO(cls_name: string, attributes: Attribute[], relations: RelationInfo[]) : Generated {
+  const lower_name = cls_name.toLowerCase()
+
+  const relationToOutputField = ({tgt, card, owner}: RelationInfo) => {
+    switch(card) {
+      case "OneToOne":
+        return owner ? `${lower_name}.get${capitalizeString(tgt.name.toLowerCase())}().getId(),` : ''
+      case "ManyToOne":
+        return `${lower_name}.get${capitalizeString(tgt.name.toLowerCase())}().getId(),`
+      case "OneToMany":
+      case "ManyToMany":
+        return `${lower_name}.get${capitalizeString(tgt.name.toLowerCase())}s().stream().map(elem -> elem.getId()).toList(),`
+    }
+  }
+
+  return expandToString`
+    public ${cls_name}OutputDto modelToOutputDTO(${cls_name} ${lower_name}) {
+        return new ${cls_name}OutputDto(
+            ${lower_name}.getId(),
+            ${attributes.map(a => `${lower_name}.get${capitalizeString(a.name)}(),`).join('\n')}
+            ${relations.map(relationToOutputField).filter(s => s !== '').join('\n')}
+            ${lower_name}.getCreatedAt()
+        );
     }
   `
 }

@@ -1,14 +1,14 @@
 import path from "path";
 import fs from "fs";
 
-import { ClassDeclaration, isClassDeclaration, Model } from "../../language-server/generated/ast";
+import { Attribute, ClassDeclaration, ContextModule, isClassDeclaration, Model } from "../../language-server/generated/ast";
 import { expandToStringWithNL, Generated, toString } from "langium";
 
 import { createPath } from "./generator-utils";
 
-import { processRelations } from "./module/relations";
 import { generateModel } from "./module/model-generator";
 import { generateController } from "./module/controller-generator";
+import { processRelations, RelationInfo } from "./module/relations";
 import { generateInputDTO, generateOutputDTO } from "./module/dtos-generator";
 import { generateClassNotFoundException, generateNotFoundException, generateNotFoundHandler } from "./module/exception-generator";
 
@@ -27,18 +27,53 @@ export function generateModules(model: Model, target_folder: string) : void {
     fs.writeFileSync(path.join(EXCEPTIONS_PATH, 'NotFoundHandler.java'),   toString(generateNotFoundHandler(package_name)))
 
     const relation_maps = processRelations(mod)
+    const supertype_classes = processSupertypes(mod)
     const mod_classes = mod.declarations.filter(isClassDeclaration)
     for(const cls of mod_classes) {
       const class_name = cls.name
-      const relations = relation_maps.get(cls) ?? []
+      const {attributes, relations} = getAttrsAndRelations(cls, relation_maps)
 
-      fs.writeFileSync(path.join(MODELS_PATH,       `${class_name}.java`), toString(generateModel(cls, relations, package_name)))
+      fs.writeFileSync(path.join(MODELS_PATH,       `${class_name}.java`), toString(generateModel(cls, supertype_classes.has(cls), relations, package_name)))
       fs.writeFileSync(path.join(APPLICATIONS_PATH, `${class_name}Apl.java`), toString(generateApplication(cls, package_name)))
-      fs.writeFileSync(path.join(DTOS_PATH,         `${class_name}InputDto.java`), toString(generateInputDTO(cls, relations, package_name)))
-      fs.writeFileSync(path.join(DTOS_PATH,         `${class_name}OutputDto.java`), toString(generateOutputDTO(cls, relations, package_name)))
-      fs.writeFileSync(path.join(CONTROLLERS_PATH,  `${class_name}Controller.java`), toString(generateController(cls, relations, package_name)))
+      fs.writeFileSync(path.join(DTOS_PATH,         `${class_name}InputDto.java`), toString(generateInputDTO(cls, attributes, relations, package_name)))
+      fs.writeFileSync(path.join(DTOS_PATH,         `${class_name}OutputDto.java`), toString(generateOutputDTO(cls, attributes, relations, package_name)))
+      fs.writeFileSync(path.join(CONTROLLERS_PATH,  `${class_name}Controller.java`), toString(generateController(cls, attributes, relations, package_name)))
       fs.writeFileSync(path.join(REPOSITORIES_PATH, `${class_name}Repository.java`), toString(generateClassRepository(cls, package_name)))
       fs.writeFileSync(path.join(EXCEPTIONS_PATH,   `${class_name}NotFoundException.java`), toString(generateClassNotFoundException(cls, package_name)))
+    }
+  }
+}
+
+/**
+ * Dado um módulo, retorna todos as classes dele que são usadas como Superclasses
+ */
+function processSupertypes(mod: ContextModule) : Set<ClassDeclaration | undefined> {
+  const set: Set<ClassDeclaration | undefined> = new Set()
+  for(const cls of mod.declarations.filter(isClassDeclaration)) {
+    if(cls.specializationEndurants.length > 0) {
+      set.add(cls.specializationEndurants[0].ref)
+    }
+  }
+  return set
+}
+
+/**
+ * Retorna todos os atributos e relações de uma Class, incluindo a de seus supertipos
+ */
+function getAttrsAndRelations(cls: ClassDeclaration, relation_map: Map<ClassDeclaration, RelationInfo[]>) : {attributes: Attribute[], relations: RelationInfo[]} {
+  // Se tem superclasse, puxa os atributos e relações da superclasse
+  if(cls.specializationEndurants.length > 0 && cls.specializationEndurants[0].ref) {
+    const parent = cls.specializationEndurants[0].ref
+    const {attributes, relations} = getAttrsAndRelations(parent, relation_map)
+
+    return {
+      attributes: attributes.concat(cls.attributes),
+      relations: relations.concat(relation_map.get(cls) ?? [])
+    }
+  } else {
+    return {
+      attributes: cls.attributes,
+      relations: relation_map.get(cls) ?? []
     }
   }
 }
