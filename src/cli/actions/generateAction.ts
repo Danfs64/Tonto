@@ -13,7 +13,7 @@ export const generateAction = async (
   fileName: string,
   opts: GenerateOptions
 ): Promise<void> => {
-  const generatedFilePath = generateCommand(fileName, opts);
+  const generatedFilePath = await generateCommand(fileName, opts);
   console.log(
     colors.green(`JSON File generated successfully: ${generatedFilePath}`)
   );
